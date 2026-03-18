@@ -2,7 +2,7 @@
 # Load the necessary library
 library(shiny)
 library(utils)
- 
+
 # Specify the path to the Zip file
 zip_file <- file.path(getwd(), "data", "EOBZIP_2026_02.zip")
 
@@ -15,7 +15,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   # Server logic
-  
+
 }
 
 shinyApp(ui, server)
