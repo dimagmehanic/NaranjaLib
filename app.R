@@ -36,6 +36,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   # Server logic
   data <- reactive({
+    req(input$Yrange, input$appl, input$type)
     prod %>%
       filter(year >= input$Yrange[1] & year <= input$Yrange[2] &
             Type %in% input$type & Applicant %in% input$appl)
