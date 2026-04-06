@@ -6,7 +6,11 @@ library(tidyverse)
 library(ggalluvial)
 library(fmtr)
 
-source("setup.R")
+con <- DBI::dbConnect(RSQLite::SQLite(), file.path(getwd(), "data", "OrangeBook.db")) # nolint
+
+# source("setup.R")
+
+prod <- tbl(con, "prod") %>% collect()
 
 ui <- fluidPage(
   # Application title
@@ -32,34 +36,35 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   # Server logic
   data <- reactive({
-    prod %>% 
-    filter( year >= input$Yrange[1] & year <=input$Yrange[2] & 
-              Type %in% input$type & Applicant %in% input$appl)
+    prod %>%
+      filter(year >= input$Yrange[1] & year <= input$Yrange[2] &
+            Type %in% input$type & Applicant %in% input$appl)
   })
 
   tab <- reactive({
     data() %>% 
-      group_by(year, Type, Applicant, Trade_Name, Definition) %>% 
-      summarise(name = first(Definition), .groups = "drop" ) %>% 
+      group_by(year, Type, Applicant, Trade_Name, Definition) %>%
+      summarise(name = first(Definition), .groups = "drop" ) %>%
       select (year, Applicant, Trade_Name, Type, Definition)
   })
-  
+
   pd <- reactive({
     groped <- data() %>% 
-      group_by(year, Type, Applicant, Trade_Name) %>% 
-      summarise(name = first(Trade_Name), .groups = "drop" )
-    
-    N <- groped %>% group_by(year, Type) %>% 
-      summarise(n = n_distinct(Trade_Name), .groups = "drop" ) 
-    
-    groped %>% 
-      group_by(year, Type, Applicant) %>% 
-      summarise(frq = n_distinct(Trade_Name), .groups = "drop" ) %>%  left_join(N, by = join_by(year, Type)) %>% 
-      mutate(pct = round(100*frq/n, digits=1)  )
-    })
-  
+      group_by(year, Type, Applicant, Trade_Name) %>%
+      summarise(name = first(Trade_Name), .groups = "drop")
+
+    N <- groped %>% group_by(year, Type) %>%
+      summarise(n = n_distinct(Trade_Name), .groups = "drop")
+
+    groped %>%
+      group_by(year, Type, Applicant) %>%
+      summarise(frq = n_distinct(Trade_Name), .groups = "drop") %>%
+      left_join(N, by = join_by(year, Type)) %>%
+      mutate(pct = round(100*frq/n, digits = 1))
+  })
+
   pl <- reactive({
-    pd() %>% 
+    pd() %>%
       ggplot(aes(axis1 = year, axis2 = Applicant, y = pct))+
       geom_alluvium(aes(fill = Type)) + geom_stratum() +
       geom_text(stat = "stratum",
@@ -68,9 +73,8 @@ server <- function(input, output, session) {
       theme_void()
   })
 
-
   output$flow <- renderPlot(pl(), res = 96)
-  output$table <- renderDataTable(tab(), options = list(pageLength=10))
+  output$table <- renderDataTable(tab(), options = list(pageLength = 10))
 }
 
 shinyApp(ui, server)

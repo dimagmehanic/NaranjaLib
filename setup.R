@@ -1,19 +1,19 @@
-
 # Specify the path to the Zip file
-# zip_file <- file.path(getwd(), "data", "EOBZIP_2026_02.zip
+zip_file <- file.path(getwd(), "data", "EOBZIP_2026_02.zip")
 
 # Extract files from the Zip archive
-# unzip(zip_file, exdir = file.path(getwd(), "data"))
+unzip(zip_file, exdir = file.path(getwd(), "data"))
+
+names <- unzip(zip_file, list = TRUE)$Name
 
 # read products data
-products <- read.csv2(file.path(getwd(), "data", "products.txt"),
-                      header = TRUE, sep = "~", fill = TRUE)
+products <- read_delim(file.path(getwd(), "data", "products.txt"), delim = "~")
+
 # read patent data
-patent <- read.csv2(file.path(getwd(), "data", "patent.txt"),
-                    header = TRUE, sep = "~", fill = TRUE) 
+patent <- read_delim(file.path(getwd(), "data", "patent.txt"), delim = "~")
+
 # read use codes
-ucode <- read.csv2(file.path(getwd(), "data", "Ucode.csv"),
-                   header = TRUE, sep = ",", fill = TRUE)
+ucode <- read_csv(file.path(getwd(), "data", "Ucode.csv"))
 
 patent %<>% select(Appl_Type, Appl_No, Product_No, Patent_Use_Code) %>%
   filter(!is.na(Patent_Use_Code))
@@ -31,9 +31,13 @@ fmt_Type <- function(var) {
   else if (var == "RX") "Prescription drug"
 }
 
-prod <- products %>% left_join(patent) %>% 
-  left_join(ucode, by=join_by(Patent_Use_Code == Code)) %>% 
-  filter(!is.na(Definition)) %>% 
-  mutate( Type = map(Type, fmt_Type) %>% unlist()  )
+prod <- products %>% left_join(patent) %>%
+  left_join(ucode, by=join_by(Patent_Use_Code == Code)) %>%
+  filter(!is.na(Definition)) %>%
+  mutate(Type = map(Type, fmt_Type) %>% unlist())
 
-rm(patent, ucode, products)
+message("💾 Saving data to SQLite: ", "prod")
+DBI::dbWriteTable(con, "prod", prod, overwrite = TRUE)
+message("✅ Saved successfully")
+
+file.path(getwd(), "data", names) %>% file.remove()
