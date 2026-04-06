@@ -1,7 +1,7 @@
 # History files
 .Rhistory
 .Rapp.history
-
+.posit
 # Session Data files
 .RData
 .RDataTmp
