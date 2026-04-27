@@ -76,6 +76,7 @@ server <- function(input, output, session) {
 
   output$flow <- renderPlot(pl(), res = 96)
   output$table <- renderDataTable(tab(), options = list(pageLength = 10))
+  session$onSessionEnded(function() { stopApp() })
 }
 
 shinyApp(ui, server)
